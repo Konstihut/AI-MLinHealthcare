@@ -1,0 +1,11 @@
+Dataset: Synthea seed42 100 patient base sample
+Purpose: Clean base table for Dirty Entity Resolution experiments
+Synthea repository: https://github.com/synthetichealth/synthea.git
+Synthea commit: d02dcd65b0c8cd96d91ae7660f3570daf0fb41a1
+Seed: 42
+Clinician seed: 4242
+Population parameter: 100
+Reference date: 20260627
+Location: Massachusetts
+Raw output directory: data/raw/synthea_seed42_100
+Committed sample file: data/sample/synthea_seed42_100/patients.csv

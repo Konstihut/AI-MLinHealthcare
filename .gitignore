@@ -22,3 +22,9 @@ logs/
 
 # System files
 .DS_Store
+
+# Keep small reproducible sample datasets in the repository
+!data/
+!data/sample/
+!data/sample/**
+!data/sample/**/*.csv
