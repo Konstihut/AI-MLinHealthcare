@@ -1,0 +1,22 @@
+Dataset: Dirty ER patient sample
+Purpose: Dirty Entity Resolution dataset derived from Synthea patients.csv
+Input file: data/sample/synthea_seed42_100/patients.csv
+Output directory: data/sample/dirty_er_seed42_100
+Seed: 42
+Clean records: 107
+Artificial duplicates: 32
+Total dirty records: 139
+Ground-truth duplicate pairs: 32
+Duplicate rate: 0.3
+Typo rate: 0.2
+Missing value rate: 0.1
+Date error rate: 0.05
+ZIP error rate: 0.1
+
+Files:
+- patients_dirty.csv: dirty ER dataset without hidden entity labels
+- ground_truth.csv: true duplicate record pairs
+- record_entity_mapping.csv: debug/evaluation mapping from record_id to entity_id
+
+Note:
+The dirty dataset intentionally excludes original unique identifiers such as Synthea Id, SSN, drivers license, and passport number. These fields would make the matching task unrealistically easy.
