@@ -1,0 +1,17 @@
+name: aiml-healthcare
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - openjdk=17
+  - pandas
+  - numpy
+  - pyyaml
+  - faker
+  - jupyterlab
+  - ipykernel
+  - pip
+  - pip:
+      - pyjedai
+      - recordlinkage
