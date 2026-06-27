@@ -58,6 +58,18 @@ LETTERS = "abcdefghijklmnopqrstuvwxyz"
 def is_missing(value: object) -> bool:
     return pd.isna(value) or str(value).strip() == ""
 
+
+def values_differ(old_value: object, new_value: object) -> bool:
+    if is_missing(old_value) and is_missing(new_value):
+        return False
+    return str(old_value) != str(new_value)
+
+
+def validate_rate(name: str, value: float) -> None:
+    if not 0.0 <= value <= 1.0:
+        raise ValueError(f"{name} must be between 0.0 and 1.0, got {value}.")
+
+
 def normalize_zip(value: object) -> object:
     if is_missing(value):
         return pd.NA
@@ -68,6 +80,7 @@ def normalize_zip(value: object) -> object:
         text = text[:-2]
 
     return text
+
 
 def random_character(rng: np.random.Generator, uppercase: bool = False) -> str:
     char = rng.choice(list(LETTERS))
@@ -159,7 +172,7 @@ def corrupt_row(
             old_value = corrupted[field]
             new_value = apply_char_edit(old_value, rng)
             corrupted[field] = new_value
-            changed = changed or old_value != new_value
+            changed = changed or values_differ(old_value, new_value)
 
     for field in MISSING_FIELDS:
         if field in corrupted.index and rng.random() < missing_rate:
@@ -171,20 +184,27 @@ def corrupt_row(
         old_value = corrupted["BIRTHDATE"]
         new_value = perturb_date(old_value, rng)
         corrupted["BIRTHDATE"] = new_value
-        changed = changed or old_value != new_value
+        changed = changed or values_differ(old_value, new_value)
 
     if "ZIP" in corrupted.index and rng.random() < zip_error_rate:
         old_value = corrupted["ZIP"]
         new_value = perturb_zip(old_value, rng)
         corrupted["ZIP"] = new_value
-        changed = changed or old_value != new_value
+        changed = changed or values_differ(old_value, new_value)
 
     # Ensure that every artificial duplicate differs from its original at least once.
     if not changed:
         for fallback_field in ["LAST", "FIRST", "ADDRESS", "CITY"]:
             if fallback_field in corrupted.index and not is_missing(corrupted[fallback_field]):
-                corrupted[fallback_field] = apply_char_edit(corrupted[fallback_field], rng)
-                break
+                old_value = corrupted[fallback_field]
+                new_value = apply_char_edit(old_value, rng)
+                corrupted[fallback_field] = new_value
+                changed = values_differ(old_value, new_value)
+                if changed:
+                    break
+
+    if not changed:
+        raise RuntimeError("Failed to create a changed duplicate record.")
 
     return corrupted
 
@@ -220,7 +240,13 @@ def create_dirty_dataset(
 ) -> None:
     rng = np.random.default_rng(seed)
 
-    clean = pd.read_csv(input_path)
+    validate_rate("duplicate_rate", duplicate_rate)
+    validate_rate("typo_rate", typo_rate)
+    validate_rate("missing_rate", missing_rate)
+    validate_rate("date_error_rate", date_error_rate)
+    validate_rate("zip_error_rate", zip_error_rate)
+
+    clean = pd.read_csv(input_path, dtype=str)
     available_columns = [column for column in ER_COLUMNS if column in clean.columns]
 
     if not available_columns:
@@ -303,9 +329,11 @@ def create_dirty_dataset(
     ground_truth_path = output_dir / "ground_truth.csv"
     metadata_path = output_dir / "metadata.txt"
 
-    dirty.to_csv(dirty_path, index=False)
-    mapping.to_csv(mapping_path, index=False)
-    ground_truth.to_csv(ground_truth_path, index=False)
+    csv_kwargs = {"index": False, "lineterminator": "\n"}
+
+    dirty.to_csv(dirty_path, **csv_kwargs)
+    mapping.to_csv(mapping_path, **csv_kwargs)
+    ground_truth.to_csv(ground_truth_path, **csv_kwargs)
 
     metadata = f"""Dataset: Dirty ER patient sample
 Purpose: Dirty Entity Resolution dataset derived from Synthea patients.csv

@@ -92,21 +92,83 @@ data/sample/synthea_seed42_100/patients.csv
 
 This `patients.csv` file is the clean base table for the first Dirty Entity Resolution experiments. The file is reproducible with the script above. The current committed sample has 107 rows and 28 columns. Although the population parameter is 100, Synthea can create additional records for deceased patients.
 
-## Next step
+## Dirty Entity Resolution sample dataset
 
-The next step is to create a Python script that reads:
+The clean Synthea base table is used to generate a small dirty Entity Resolution dataset.
+
+The dirty dataset is generated with:
+
+```bash
+python scripts/create_dirty_er_dataset.py
+```
+
+The script reads:
 
 ```text
 data/sample/synthea_seed42_100/patients.csv
 ```
 
-and generates a dirty Entity Resolution dataset with:
+and writes:
 
-* duplicate patient records
-* typographical errors
+```text
+data/sample/dirty_er_seed42_100/patients_dirty.csv
+data/sample/dirty_er_seed42_100/ground_truth.csv
+data/sample/dirty_er_seed42_100/record_entity_mapping.csv
+data/sample/dirty_er_seed42_100/metadata.txt
+```
+
+The default parameters are:
+
+```text
+Seed: 42
+Duplicate rate: 0.30
+Typo rate: 0.20
+Missing value rate: 0.10
+Date error rate: 0.05
+ZIP error rate: 0.10
+```
+
+For the current small sample, this creates:
+
+```text
+Clean records: 107
+Artificial duplicates: 32
+Total dirty records: 139
+Ground-truth duplicate pairs: 32
+```
+
+The dirty dataset contains Febrl-inspired artificial errors:
+
+* character deletion
+* character insertion
+* character substitution
+* adjacent character transposition
 * missing values
-* spelling variations
-* ground-truth duplicate pairs
+* small date shifts
+* ZIP code digit changes
 
-This dirty dataset will then be used to evaluate filtering and blocking methods with PyJedAI.
+Direct identifiers such as the original Synthea `Id`, `SSN`, driver license number, and passport number are excluded from `patients_dirty.csv`, because these fields would make the Entity Resolution task unrealistically easy.
+
+The `ground_truth.csv` file contains the true duplicate record pairs and can later be used to evaluate recall, precision, and filtering/blocking quality.
+
+The `record_entity_mapping.csv` file is included as an additional debug and evaluation aid. It maps each visible `record_id` to an internal `entity_id`, but this file should not be used as input for matching methods.
+
+To verify that the generated dirty dataset is reproducible, run the script twice and compare the output files:
+
+```bash
+cp data/sample/dirty_er_seed42_100/patients_dirty.csv /tmp/patients_dirty_run1.csv
+cp data/sample/dirty_er_seed42_100/ground_truth.csv /tmp/ground_truth_run1.csv
+
+python scripts/create_dirty_er_dataset.py
+
+cmp -s /tmp/patients_dirty_run1.csv data/sample/dirty_er_seed42_100/patients_dirty.csv \
+  && echo "patients_dirty.csv is reproducible" \
+  || echo "patients_dirty.csv differs"
+
+cmp -s /tmp/ground_truth_run1.csv data/sample/dirty_er_seed42_100/ground_truth.csv \
+  && echo "ground_truth.csv is reproducible" \
+  || echo "ground_truth.csv differs"
+```
+
+The next project step is to run a small PyJedAI smoke test on `patients_dirty.csv` and evaluate whether the generated `ground_truth.csv` can be used correctly for Dirty ER evaluation.
 
